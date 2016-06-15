@@ -1,4 +1,3 @@
 #!/bin/sh
 
-#pulp build --to app.js
-cp app.js ~/.nvim/rplugin/node
+pulp build --to ~/.nvim/rplugin/node/app.js
