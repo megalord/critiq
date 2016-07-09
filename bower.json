@@ -8,7 +8,12 @@
     "output"
   ],
   "dependencies": {
-    "purescript-console": "^1.0.0"
+    "purescript-console": "^1.0.0",
+    "purescript-neovim": "~0.0.1",
+    "purescript-simple-request": "~3.1.1",
+    "purescript-node-child-process": "~1.0.0",
+    "purescript-node-fs-aff": "~1.0.0",
+    "purescript-node-os": "~1.1.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^1.0.0"
