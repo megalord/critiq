@@ -28,7 +28,7 @@ main = command "CritiqPR" defaultOpts handle
 handle :: forall e. Vim -> Args -> Range -> Aff (buffer :: BUFFER, cp :: CHILD_PROCESS, fs :: FS, http :: HTTP, os :: OS, plugin :: PLUGIN | e) Unit
 handle vim args _ = case uncons args of
                          Just { head: num } -> case fromString num of
-                                                    Just x -> pull vim x
+                                                    Just b -> pull vim b
                                                     Nothing -> reportError vim (num <> " is not a number")
                          Nothing -> reportError vim "PR number argument required"
 
