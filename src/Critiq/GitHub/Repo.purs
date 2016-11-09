@@ -10,8 +10,9 @@ import Control.Monad.Error.Class (throwError)
 import Data.Array (filter, head, index)
 import Data.Either (either, Either(Left, Right))
 import Data.Maybe (maybe, maybe', Maybe(Just, Nothing))
-import Data.String (split, take)
-import Data.String.Regex (match, noFlags, regex, Regex)
+import Data.String (split, take, Pattern(..))
+import Data.String.Regex (match, regex, Regex)
+import Data.String.Regex.Flags (noFlags)
 import Node.Buffer (toString, BUFFER)
 import Node.ChildProcess (defaultExecOptions, exec, CHILD_PROCESS)
 import Node.Encoding (Encoding(UTF8))
@@ -34,7 +35,7 @@ match' (Left _) = \_ -> Nothing
 match' (Right re) = match re
 
 findRemote :: String -> String -> Either String String
-findRemote remote = note remoteError <<< head <<< filter (\s -> take 6 s == remote) <<< split "\n"
+findRemote remote = note remoteError <<< head <<< filter (\s -> take 6 s == remote) <<< split (Pattern "\n")
   where remoteError = "Remote " <> remote <> " not found"
 
 parseRemote :: String -> Either String Repo

@@ -7,7 +7,7 @@ import Data.Array (length, uncons)
 import Data.Either (either)
 import Data.Int (fromString)
 import Data.Maybe (Maybe(Just, Nothing))
-import Data.String (split)
+import Data.String (split, Pattern(..))
 import Neovim.Buffer (setLineSlice)
 import Neovim.Plugin (command, defaultOpts, Args, Range, PLUGIN)
 import Neovim.Types (Vim)
@@ -30,10 +30,10 @@ handle vim args _ = case uncons args of
                          Just { head: num } -> case fromString num of
                                                     Just x -> pull vim x
                                                     Nothing -> reportError vim (num <> " is not a number")
-                         Nothing -> reportError vim "PR number argument required"
+                         Nothing -> reportError vim "PR number argument required" -- TODO: open menu
 
 pull :: forall e. Vim -> Int -> Aff (buffer :: BUFFER, cp :: CHILD_PROCESS, fs :: FS, http :: HTTP, os :: OS, plugin :: PLUGIN | e) Unit
-pull vim x = pullRequest x >>= either (reportError vim) (\(PullRequest pr) -> open vim >>= \_ -> (writeToLines <<< split "\r\n") pr.body)
+pull vim x = pullRequest x >>= either (reportError vim) (\(PullRequest pr) -> open vim >>= \_ -> (writeToLines <<< split (Pattern "\n")) pr.body)
   where writeToLines lines = getCurrentBuffer vim >>= \b -> setLineSlice b 0 (length lines) true false lines
 
 --topleft vertical 60 new
