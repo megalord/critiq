@@ -14,6 +14,7 @@ commands :: Array String
 commands = [ "botright vertical 60 new"
            ]
 
+--https://github.com/scrooloose/nerdtree/blob/master/lib/nerdtree/creator.vim#L282
 settings :: Array String
 settings = [ "noswapfile"
            , "buftype=nofile"
@@ -22,8 +23,6 @@ settings = [ "noswapfile"
            , "nospell"
            , "nonu"
            ]
-
--- map ("setlocal " <> _) settings
 
 --keyMap = [ Tuple ("<cr>" "critiq#selectPR") ]
 -- map ("nnoremap <buffer> <silent> " <> key <> value) keyMap

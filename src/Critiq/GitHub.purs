@@ -35,21 +35,26 @@ makeComment n c = pure unit
 
 data PullRequest = PullRequest
   { body :: String
+  , number :: Int
   , state :: String
+  , title :: String
   }
 
 instance pullRequestIsForeign :: IsForeign PullRequest where
   read value = do
     body <- readProp "body" value
+    number <- readProp "number" value
     state <- readProp "state" value
-    pure $ PullRequest { body: body, state: state }
+    title <- readProp "title" value
+    pure $ PullRequest { body: body, number: number, state: state, title: title }
+
+readJSON' = either (Left <<< show) Right <<< runExcept <<< readJSON
 
 pullRequest :: forall e. Int -> Aff (buffer :: BUFFER, cp :: CHILD_PROCESS, fs :: FS, http :: HTTP, os :: OS | e) (Either String PullRequest)
-pullRequest n = readJSON' <$> (request "GET" ("/pulls/" <> show n))
-  where readJSON' = either (Left <<< show) Right <<< runExcept <<< readJSON
+pullRequest n = readJSON' <$> request "GET" ("/pulls/" <> show n)
 
-pullRequests :: forall e. Aff (http :: HTTP | e) (Array PullRequest)
-pullRequests = pure []
+pullRequests :: forall e. Aff (buffer :: BUFFER, cp :: CHILD_PROCESS, fs :: FS, http :: HTTP, os :: OS | e) (Either String (Array PullRequest))
+pullRequests = readJSON' <$> request "GET" "/pulls"
 
 --type Diff =
 --  { removed :: 
