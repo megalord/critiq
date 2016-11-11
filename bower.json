@@ -9,7 +9,7 @@
   ],
   "dependencies": {
     "purescript-console": "~2.0.0",
-    "purescript-neovim": "~0.0.3",
+    "purescript-neovim": "~0.0.4",
     "purescript-node-child-process": "~3.0.0",
     "purescript-node-fs-aff": "~3.0.0",
     "purescript-node-os": "~1.1.0",
