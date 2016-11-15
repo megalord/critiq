@@ -22,8 +22,6 @@ import Critiq.GitHub (pullRequest, pullRequests, PullRequest(..))
 import Critiq.Pane (openWrite)
 
 
-main :: forall e. Eff (buffer :: BUFFER, cp :: CHILD_PROCESS, fs :: FS, http :: HTTP, os :: OS,
-                       plugin :: PLUGIN | e) Unit
 main = sequence_ (
   [ command "CritiqPR" defaultOpts handle
   , function "CritiqSelectPR" (\vim _ -> Nvim.getCurrentLine vim >>= maybe (pure unit) (pull vim) <<< prNumberFromLine)

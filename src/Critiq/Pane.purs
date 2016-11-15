@@ -5,43 +5,52 @@ module Critiq.Pane
 
 import Prelude
 import Control.Monad.Aff (Aff)
-import Data.Array (length)
+import Data.Array (filter, head, length)
+import Data.Either (either)
 import Data.Foldable (sequence_)
+import Data.Maybe (maybe')
+import Data.String (replaceAll, Pattern(..), Replacement(..))
+import Data.String.Regex (regex, test)
+import Data.String.Regex.Flags (noFlags)
+import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
 
-import Neovim.Buffer (setLineSlice)
-import Neovim.Plugin (PLUGIN)
-import Neovim.Types (Vim)
-import Neovim.Vim (command, getCurrentBuffer)
+import Neovim.Buffer (getName, setLineSlice)
+import Neovim.Plugin (debug, PLUGIN)
+import Neovim.Types (Buffer, Vim)
+import Neovim.Vim (command, getBuffers, getCurrentBuffer)
 
-commands :: Array String
-commands = [ "botright vertical 60 new"
+bufName = "*Critiq*"
+
+commands = [ "botright vertical 60 new " <> bufName
            ]
 
---https://github.com/scrooloose/nerdtree/blob/master/lib/nerdtree/creator.vim#L282
---https://github.com/scrooloose/nerdtree/blob/master/plugin/NERD_tree.vim#L160
-settings :: Array String
 settings = [ "noswapfile"
            , "buftype=nofile"
-           , "bufhidden=delete"
+           , "bufhidden=wipe"
            , "nobuflisted"
            , "nospell"
            , "nonu"
            ]
 
-keyMap :: Array (Tuple String String)
 keyMap = [ Tuple "<enter>" "CritiqSelectPR()" ]
 
--- exec 'nnoremap <buffer> <silent> '. self.key . premap . ':call nerdtree#ui_glue#invokeKeyMap("'. keymapInvokeString .'")<cr>'
+writeLines :: forall e. Buffer -> (Array String) -> Aff (plugin :: PLUGIN | e) Unit
+writeLines b lines = setLineSlice b 0 (length lines) true false lines
 
-writeLines :: forall e. Vim -> (Array String) -> Aff (plugin :: PLUGIN | e) Unit
-writeLines vim lines = getCurrentBuffer vim >>= \b -> setLineSlice b 0 (length lines) true false lines
-
-open :: forall e. Vim -> Aff (plugin :: PLUGIN | e) Unit
-open vim = sequence_ $ map (command vim) setupCmds
+openNew :: forall e. Vim -> Aff (plugin :: PLUGIN | e) Unit
+openNew vim = sequence_ $ map (command vim) setupCmds
   where setupCmds = commands
                  <> map ("setlocal " <> _) settings
                  <> map (\(Tuple key value) -> "nnoremap <buffer> <silent> " <> key <> " :call " <> value) keyMap
 
+openExisting :: forall e. Vim -> String -> Aff (plugin :: PLUGIN | e) Unit
+openExisting vim name = sequence_ $ map (command vim) ["set switchbuf=useopen", "sbuffer " <> name]
+
 openWrite :: forall e. Vim -> (Array String) -> Aff (plugin :: PLUGIN | e) Unit
-openWrite vim lines = open vim >>= \_ ->  writeLines vim lines
+openWrite vim lines = open vim >>= flip writeLines lines
+
+open vim = (\_ -> getCurrentBuffer vim) <=< (maybe' (\_ -> openNew vim) (openExisting vim) <<< existing) <=< (sequence <<< map getName) <=< getBuffers $ vim
+  where existing = head <<< filter (either (\_ -> const false) test re)
+        re = regex (escape bufName <> "$") noFlags
+        escape = replaceAll (Pattern "*") (Replacement "\\*")
