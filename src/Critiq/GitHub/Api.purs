@@ -9,6 +9,7 @@ import Control.Monad.Eff.Exception (Error)
 import Data.Options ((:=), Options)
 import Data.StrMap (fromFoldable)
 import Data.Tuple (Tuple(..))
+import Neovim.Plugin (debug, PLUGIN)
 import Node.HTTP.Client as Client
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
@@ -46,5 +47,7 @@ requestAff :: forall e. Options Client.RequestOptions -> Aff (http :: HTTP | e) 
 requestAff opts = makeAff (\error success -> Client.request opts success >>= endReq)
   where endReq req = end (Client.requestAsStream req) (pure unit)
 
-request :: forall e. String -> String -> Aff (buffer :: BUFFER, cp :: CHILD_PROCESS, fs :: FS, http :: HTTP, os :: OS | e) String
-request method path = reqOpts method path >>= requestAff >>= collapseStreamAff <<< Client.responseAsStream
+request :: forall e. String -> String -> Aff (buffer :: BUFFER, cp :: CHILD_PROCESS, fs :: FS, http :: HTTP, os :: OS,
+                                              plugin :: PLUGIN | e) String
+request method path = reqOpts method path >>= requestAff >>= traceCode >>= collapseStreamAff <<< Client.responseAsStream
+  where traceCode res = map (const res) <<< debug <<< show <<< Client.statusCode $ res

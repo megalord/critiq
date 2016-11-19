@@ -1,6 +1,8 @@
 module Critiq.Pane
-  ( open
+  ( bufShow
+  , open
   , openWrite
+  , class BufShow
   ) where
 
 import Prelude
@@ -16,13 +18,17 @@ import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
 
 import Neovim.Buffer (getName, setLineSlice)
-import Neovim.Plugin (debug, PLUGIN)
+import Neovim.Plugin (PLUGIN)
 import Neovim.Types (Buffer, Vim)
-import Neovim.Vim (command, getBuffers, getCurrentBuffer)
+import Neovim.Vim (command, eval, getBuffers, getCurrentBuffer)
+
+
+class BufShow a where
+  bufShow :: a -> Array String
 
 bufName = "*Critiq*"
 
-commands = [ "botright vertical 60 new " <> bufName
+commands = [ "botright vertical 80 new " <> bufName
            ]
 
 settings = [ "noswapfile"
@@ -38,6 +44,9 @@ keyMap = [ Tuple "<enter>" "CritiqSelectPR()" ]
 writeLines :: forall e. Buffer -> (Array String) -> Aff (plugin :: PLUGIN | e) Unit
 writeLines b lines = setLineSlice b 0 (length lines) true false lines
 
+clear :: forall e. Vim -> Aff (plugin :: PLUGIN | e) Unit
+clear = const (pure unit) <=< flip command "normal ggdG"
+
 openNew :: forall e. Vim -> Aff (plugin :: PLUGIN | e) Unit
 openNew vim = sequence_ $ map (command vim) setupCmds
   where setupCmds = commands
@@ -48,7 +57,7 @@ openExisting :: forall e. Vim -> String -> Aff (plugin :: PLUGIN | e) Unit
 openExisting vim name = sequence_ $ map (command vim) ["set switchbuf=useopen", "sbuffer " <> name]
 
 openWrite :: forall e. Vim -> (Array String) -> Aff (plugin :: PLUGIN | e) Unit
-openWrite vim lines = open vim >>= flip writeLines lines
+openWrite vim lines = open vim >>= (\b -> clear vim >>= \_ -> writeLines b lines)
 
 open vim = (\_ -> getCurrentBuffer vim) <=< (maybe' (\_ -> openNew vim) (openExisting vim) <<< existing) <=< (sequence <<< map getName) <=< getBuffers $ vim
   where existing = head <<< filter (either (\_ -> const false) test re)
