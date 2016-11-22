@@ -14,12 +14,12 @@ When you are looking at code, you are more effective using the tools you know.  
 
 This is a Neovim [remote plugin](https://neovim.io/doc/user/remote_plugin.html) leveraging the [node host](https://github.com/neovim/node-host).
 
-1) Modify your `init.vim` with `Plug 'neovim/node-host'` and run `:PlugInstall`, or adapt that for your plugin manager of choice. 
-2) Make sure the remote plugin directory is in your runtime path: add `let &rtp = &rtp.','.expand('~').'/.nvim'` to your `init.vim` if necessary.  Run `:set runtimepath?` to check its current value. 
-3) Download [`critiq.js`](https://github.com/megalord/critiq/releases/latest/) to the node remote plugin directory (`~/.nvim/rplugin/node/`). 
-4) Run `:UpdateRemotePlugins` to generate the manifest file. 
-5) Restart Neovim in a directory that is a git repo with an "origin" upstream that points to GitHub. 
-6) Run `:CritiqPR` 
+1. Modify your `init.vim` with `Plug 'neovim/node-host'` and run `:PlugInstall`, or adapt that for your plugin manager of choice.
+2. Make sure the remote plugin directory is in your runtime path: add `let &rtp = &rtp.','.expand('~').'/.nvim'` to your `init.vim` if necessary.  Run `:set runtimepath?` to check its current value.
+3. Download [`critiq.js`](https://github.com/megalord/critiq/releases/latest/) to the node remote plugin directory (`~/.nvim/rplugin/node/`).
+4. Run `:UpdateRemotePlugins` to generate the manifest file.
+5. Restart Neovim in a directory that is a git repo with an "origin" upstream that points to GitHub.
+6. Run `:CritiqPR`
 
 
 ### Development
