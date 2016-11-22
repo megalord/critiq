@@ -1,9 +1,10 @@
 module Critiq.GitHub
-  ( comments
+  ( changedFiles
+  , comments
   , makeComment
   , pullRequest
   , pullRequests
-  , PullRequest(..)
+  , module Exports
   ) where
 
 import Prelude
@@ -13,8 +14,7 @@ import Control.Monad.Except (runExcept, throwError)
 import Data.Array (foldl, snoc)
 import Data.Maybe (maybe', Maybe(..))
 import Data.Either (either)
-import Data.Foreign.Class (readJSON, readProp, class IsForeign)
-import Data.String (replaceAll, split, Pattern(..), Replacement(..))
+import Data.Foreign.Class (readJSON, class IsForeign)
 import Data.StrMap (alter, empty, StrMap)
 import Neovim.Plugin (PLUGIN)
 import Node.Buffer (BUFFER)
@@ -24,65 +24,10 @@ import Node.HTTP (HTTP)
 import Node.OS (OS)
 
 import Critiq.GitHub.Api (request)
-import Critiq.Pane (bufShow, class BufShow)
+import Critiq.Github.Types (ChangedFile, IssueComment, PullRequest, PRComment(..))
+import Critiq.Github.Types (PullRequest(..)) as Exports
+import Critiq.Pane (bufShow)
 
-
-splitLines :: String -> Array String
-splitLines = split (Pattern "\n") <<< replaceAll (Pattern "\r") (Replacement "")
-
-renderBody :: String -> Array String
-renderBody = map ("\" " <> _) <<< splitLines
-
-data IssueComment = IssueComment
-  { body :: String
-  , time :: String
-  , user :: String
-  }
-
-instance commentIsForeign :: IsForeign IssueComment where
-  read value = do
-    body <- readProp "body" value
-    time <- readProp "created_at" value
-
-    userObj <- readProp "user" value
-    user <- readProp "login" userObj
-    pure $ IssueComment { body: body, time: time, user: user }
-
-instance bufShowIssueComment :: BufShow IssueComment where
-  bufShow (IssueComment comment) = [ "From " <> comment.user <> " on " <> comment.time ] <> renderBody comment.body
-
-data PRComment = PRComment
-  { body :: String
-  , diff :: String
-  , path :: String
-  , position :: Int
-  , time :: String
-  , user :: String
-  }
-
-instance prCommentIsForeign :: IsForeign PRComment where
-  read value = do
-    body <- readProp "body" value
-    diff <- readProp "diff_hunk" value
-    path <- readProp "path" value
-    position <- readProp "position" value
-    time <- readProp "created_at" value
-
-    userObj <- readProp "user" value
-    user <- readProp "login" userObj
-    pure $ PRComment { body: body, diff: diff, path: path, position: position, time: time, user: user }
-
-instance bufShowPRComment :: BufShow PRComment where
-  bufShow (PRComment comment) = [ "From " <> comment.user <> " on " <> comment.time
-                                , comment.path
-                                ] <> splitLines comment.diff <> renderBody comment.body
-
-data PRCommentGroup = PRCommentGroup
-  { comments :: Array PRComment
-  , diff :: String
-  , path :: String
-  , position :: Int
-  }
 
 groupBy :: forall a. (a -> String) -> (Array a) -> StrMap (Array a)
 groupBy keyFn = foldl (\d x -> alter (append x) (keyFn x) d) empty
@@ -93,24 +38,6 @@ commentGroups cs = groupBy (\(PRComment c) -> c.path <> ":" <> show c.position) 
 
 makeComment :: forall e. Int -> String -> Aff (http :: HTTP | e) Unit
 makeComment n c = pure unit
-
-data PullRequest = PullRequest
-  { body :: String
-  , number :: Int
-  , state :: String
-  , title :: String
-  }
-
-instance pullRequestIsForeign :: IsForeign PullRequest where
-  read value = do
-    body <- readProp "body" value
-    number <- readProp "number" value
-    state <- readProp "state" value
-    title <- readProp "title" value
-    pure $ PullRequest { body: body, number: number, state: state, title: title }
-
-instance bufShowPullRequest :: BufShow PullRequest where
-  bufShow (PullRequest pr) = [ pr.title <> " #" <> show pr.number ] <> renderBody pr.body
 
 readJSON' :: forall a e. (IsForeign a) => String -> Aff e a
 readJSON' = either (throwError <<< error <<< show) pure <<< runExcept <<< readJSON
@@ -136,6 +63,10 @@ comments :: forall e. Int -> Aff (buffer :: BUFFER, cp :: CHILD_PROCESS, fs :: F
 comments n = append <$> xs n <*> ys n
   where xs n = foldl (\b a -> b <> snoc (bufShow a) "") [] <$> issueComments n
         ys n = foldl (\b a -> b <> snoc (bufShow a) "") [] <$> pullRequestComments n
+
+changedFiles :: forall e. Int -> Aff (buffer :: BUFFER, cp :: CHILD_PROCESS, fs :: FS, http :: HTTP, os :: OS,
+                                      plugin :: PLUGIN | e) (Array ChangedFile)
+changedFiles n = readJSON' =<< request "GET" ("/pulls/" <> show n <> "/files")
 
 --type Diff =
 --  { removed :: 

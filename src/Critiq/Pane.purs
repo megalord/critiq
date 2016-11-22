@@ -36,6 +36,7 @@ commands = [ "botright vertical 80 new " <> bufName
 settings = [ "noswapfile"
            , "buftype=nofile"
            , "bufhidden=wipe"
+           , "filetype=markdown"
            , "nobuflisted"
            , "nospell"
            , "nonumber"

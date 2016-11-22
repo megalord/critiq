@@ -10,11 +10,13 @@ import Neovim.Types (Vim)
 syntax = [ "CritiqComment #^\" .*#"
          , "CritiqDiffMinus #^-.*$#"
          , "CritiqDiffPlus #^+.*$#"
+         , "CritiqPatch #^@@.*$#"
          ]
 
 highlights = [ "link CritiqComment String"
              , "CritiqDiffMinus ctermbg=52 guibg=#5f0000"
              , "CritiqDiffPlus ctermbg=22 guibg=#005f00"
+             , "CritiqPatch ctermfg=244"
              ]
 
 commands :: Array String
