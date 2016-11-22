@@ -22,6 +22,8 @@ import Neovim.Plugin (PLUGIN)
 import Neovim.Types (Buffer, Vim)
 import Neovim.Vim (command, eval, getBuffers, getCurrentBuffer)
 
+import Critiq.Syntax as Syntax
+
 
 class BufShow a where
   bufShow :: a -> Array String
@@ -36,7 +38,8 @@ settings = [ "noswapfile"
            , "bufhidden=wipe"
            , "nobuflisted"
            , "nospell"
-           , "nonu"
+           , "nonumber"
+           --, "nomodifiable" must do after finished writing
            ]
 
 keyMap = [ Tuple "<enter>" "CritiqSelectPR()" ]
@@ -52,6 +55,7 @@ openNew vim = sequence_ $ map (command vim) setupCmds
   where setupCmds = commands
                  <> map ("setlocal " <> _) settings
                  <> map (\(Tuple key value) -> "nnoremap <buffer> <silent> " <> key <> " :call " <> value) keyMap
+                 <> Syntax.commands
 
 openExisting :: forall e. Vim -> String -> Aff (plugin :: PLUGIN | e) Unit
 openExisting vim name = sequence_ $ map (command vim) ["set switchbuf=useopen", "sbuffer " <> name]

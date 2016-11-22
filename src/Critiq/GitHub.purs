@@ -11,9 +11,11 @@ import Control.Monad.Aff (Aff)
 import Control.Monad.Eff.Exception (error)
 import Control.Monad.Except (runExcept, throwError)
 import Data.Array (foldl, snoc)
+import Data.Maybe (maybe', Maybe(..))
 import Data.Either (either)
 import Data.Foreign.Class (readJSON, readProp, class IsForeign)
 import Data.String (replaceAll, split, Pattern(..), Replacement(..))
+import Data.StrMap (alter, empty, StrMap)
 import Neovim.Plugin (PLUGIN)
 import Node.Buffer (BUFFER)
 import Node.ChildProcess (CHILD_PROCESS)
@@ -27,6 +29,9 @@ import Critiq.Pane (bufShow, class BufShow)
 
 splitLines :: String -> Array String
 splitLines = split (Pattern "\n") <<< replaceAll (Pattern "\r") (Replacement "")
+
+renderBody :: String -> Array String
+renderBody = map ("\" " <> _) <<< splitLines
 
 data IssueComment = IssueComment
   { body :: String
@@ -44,12 +49,13 @@ instance commentIsForeign :: IsForeign IssueComment where
     pure $ IssueComment { body: body, time: time, user: user }
 
 instance bufShowIssueComment :: BufShow IssueComment where
-  bufShow (IssueComment comment) = [ "From " <> comment.user <> " on " <> comment.time ] <> splitLines comment.body
+  bufShow (IssueComment comment) = [ "From " <> comment.user <> " on " <> comment.time ] <> renderBody comment.body
 
 data PRComment = PRComment
   { body :: String
   , diff :: String
   , path :: String
+  , position :: Int
   , time :: String
   , user :: String
   }
@@ -59,16 +65,31 @@ instance prCommentIsForeign :: IsForeign PRComment where
     body <- readProp "body" value
     diff <- readProp "diff_hunk" value
     path <- readProp "path" value
+    position <- readProp "position" value
     time <- readProp "created_at" value
 
     userObj <- readProp "user" value
     user <- readProp "login" userObj
-    pure $ PRComment { body: body, diff: diff, path: path, time: time, user: user }
+    pure $ PRComment { body: body, diff: diff, path: path, position: position, time: time, user: user }
 
 instance bufShowPRComment :: BufShow PRComment where
   bufShow (PRComment comment) = [ "From " <> comment.user <> " on " <> comment.time
                                 , comment.path
-                                ] <> splitLines comment.diff <> splitLines comment.body
+                                ] <> splitLines comment.diff <> renderBody comment.body
+
+data PRCommentGroup = PRCommentGroup
+  { comments :: Array PRComment
+  , diff :: String
+  , path :: String
+  , position :: Int
+  }
+
+groupBy :: forall a. (a -> String) -> (Array a) -> StrMap (Array a)
+groupBy keyFn = foldl (\d x -> alter (append x) (keyFn x) d) empty
+  where append x = maybe' (\_ -> Just [x]) (Just <<< flip snoc x)
+
+commentGroups :: Array PRComment -> StrMap (Array PRComment)
+commentGroups cs = groupBy (\(PRComment c) -> c.path <> ":" <> show c.position) cs
 
 makeComment :: forall e. Int -> String -> Aff (http :: HTTP | e) Unit
 makeComment n c = pure unit
@@ -89,7 +110,7 @@ instance pullRequestIsForeign :: IsForeign PullRequest where
     pure $ PullRequest { body: body, number: number, state: state, title: title }
 
 instance bufShowPullRequest :: BufShow PullRequest where
-  bufShow (PullRequest pr) = [ pr.title <> " #" <> show pr.number ] <> splitLines pr.body
+  bufShow (PullRequest pr) = [ pr.title <> " #" <> show pr.number ] <> renderBody pr.body
 
 readJSON' :: forall a e. (IsForeign a) => String -> Aff e a
 readJSON' = either (throwError <<< error <<< show) pure <<< runExcept <<< readJSON
