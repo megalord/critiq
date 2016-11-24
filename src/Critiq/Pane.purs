@@ -17,10 +17,10 @@ import Data.String.Regex.Flags (noFlags)
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
 
-import Neovim.Buffer (getName, setLineSlice)
+import Neovim.Buffer (getName, setLines)
 import Neovim.Plugin (PLUGIN)
-import Neovim.Types (Buffer, Vim)
-import Neovim.Vim (command, eval, getBuffers, getCurrentBuffer)
+import Neovim.Types (Buffer, Nvim)
+import Neovim.Nvim (command, eval, listBufs, getCurrentBuf)
 
 import Critiq.Syntax as Syntax
 
@@ -46,25 +46,25 @@ settings = [ "noswapfile"
 keyMap = [ Tuple "<enter>" "CritiqSelectPR()" ]
 
 writeLines :: forall e. Buffer -> (Array String) -> Aff (plugin :: PLUGIN | e) Unit
-writeLines b lines = setLineSlice b 0 (length lines) true false lines
+writeLines b lines = setLines b 0 (length lines) false lines
 
-clear :: forall e. Vim -> Aff (plugin :: PLUGIN | e) Unit
+clear :: forall e. Nvim -> Aff (plugin :: PLUGIN | e) Unit
 clear = const (pure unit) <=< flip command "normal ggdG"
 
-openNew :: forall e. Vim -> Aff (plugin :: PLUGIN | e) Unit
+openNew :: forall e. Nvim -> Aff (plugin :: PLUGIN | e) Unit
 openNew vim = sequence_ $ map (command vim) setupCmds
   where setupCmds = commands
                  <> map ("setlocal " <> _) settings
                  <> map (\(Tuple key value) -> "nnoremap <buffer> <silent> " <> key <> " :call " <> value) keyMap
                  <> Syntax.commands
 
-openExisting :: forall e. Vim -> String -> Aff (plugin :: PLUGIN | e) Unit
+openExisting :: forall e. Nvim -> String -> Aff (plugin :: PLUGIN | e) Unit
 openExisting vim name = sequence_ $ map (command vim) ["set switchbuf=useopen", "sbuffer " <> name]
 
-openWrite :: forall e. Vim -> (Array String) -> Aff (plugin :: PLUGIN | e) Unit
+openWrite :: forall e. Nvim -> (Array String) -> Aff (plugin :: PLUGIN | e) Unit
 openWrite vim lines = open vim >>= (\b -> clear vim >>= \_ -> writeLines b lines)
 
-open vim = (\_ -> getCurrentBuffer vim) <=< (maybe' (\_ -> openNew vim) (openExisting vim) <<< existing) <=< (sequence <<< map getName) <=< getBuffers $ vim
+open vim = (\_ -> getCurrentBuf vim) <=< (maybe' (\_ -> openNew vim) (openExisting vim) <<< existing) <=< (sequence <<< map getName) <=< listBufs $ vim
   where existing = head <<< filter (either (\_ -> const false) test re)
         re = regex (escape bufName <> "$") noFlags
         escape = replaceAll (Pattern "*") (Replacement "\\*")

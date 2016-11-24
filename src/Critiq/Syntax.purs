@@ -4,7 +4,7 @@ module Critiq.Syntax
 
 import Prelude
 import Neovim.Plugin (PLUGIN)
-import Neovim.Types (Vim)
+import Neovim.Types (Nvim)
 
 
 syntax = [ "CritiqComment #^\" .*#"
